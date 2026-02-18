@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Type Selection</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: #212121;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            width: 80%;
+            max-width: 600px;
+        }
+
+        h1, h2 {
+            color: #bb86fc;
+            margin-bottom: 30px;
+        }
+
+        .vehicle-type-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        button {
+            background-color: #bb86fc;
+            color: #fff;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #6200ee;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        #dailyEmissions, #emissionsTable {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #555;
+            border-radius: 8px;
+            background-color: #333;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #555;
+            text-align: center;
+        }
+
+        th {
+            background-color: #444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="dailyEmissions">
+            <h2>Today's total Emissions:</h2>
+            <p id="emissionsValue">Loading...</p>
+        </div>
+
+        <div id="emissionsTable">
+            <h2>Emissions Breakdown</h2>
+            <table id="emissionsBreakdown">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Daily (kg)</th>
+                        <th>Weekly (kg)</th>
+                        <th>Monthly (kg)</th>
+                        <th>Yearly (kg)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr id="personalEmissions">
+                        <td>Personal</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                    </tr>
+                    <tr id="roadwaysEmissions">
+                        <td>Roadways</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                    </tr>
+                    <tr id="railwaysEmissions">
+                        <td>Railways</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                    </tr>
+                    <tr id="airwaysEmissions">
+                        <td>Airways</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h1>Select Vehicle Type</h1>
+        <div class="vehicle-type-buttons">
+            <a href="personal.html"><button>Personal Vehicle</button></a>
+            <a href="commercial.html"><button>Commercial Vehicle</button></a>
+        </div>
+    </div>
+	<script>
+    document.addEventListener('DOMContentLoaded', async function() {
+		const contractAddress = "0xd3553D865893b1064C2490f50450f4809E744AC1";
+		const contractABI = [
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "previousEmissions",
+				"type": "uint256"
+			}
+		],
+		"name": "DailyEmissionsReset",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "enum EmissionTracker.TransportCategory",
+				"name": "transportCategory",
+				"type": "uint8"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint8",
+				"name": "roadType",
+				"type": "uint8"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint8",
+				"name": "personalFuelType",
+				"type": "uint8"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "distance",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "co2Emitted",
+				"type": "uint256"
+			}
+		],
+		"name": "TripEnded",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "getDailyEmissions",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "getMonthlyEmissions",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "getTripCount",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "index",
+				"type": "uint256"
+			}
+		],
+		"name": "getTripData",
+		"outputs": [
+			{
+				"internalType": "enum EmissionTracker.TransportCategory",
+				"name": "",
+				"type": "uint8"
+			},
+			{
+				"internalType": "uint8",
+				"name": "",
+				"type": "uint8"
+			},
+			{
+				"internalType": "uint8",
+				"name": "",
+				"type": "uint8"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "getWeeklyEmissions",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "getYearlyEmissions",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "lastUserReset",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "distance",
+				"type": "uint256"
+			}
+		],
+		"name": "recordAirwaysTrip",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint8",
+				"name": "personalFuelType",
+				"type": "uint8"
+			},
+			{
+				"internalType": "uint256",
+				"name": "distance",
+				"type": "uint256"
+			}
+		],
+		"name": "recordPersonalVehicleTrip",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "distance",
+				"type": "uint256"
+			}
+		],
+		"name": "recordRailwaysTrip",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint8",
+				"name": "roadType",
+				"type": "uint8"
+			},
+			{
+				"internalType": "uint256",
+				"name": "distance",
+				"type": "uint256"
+			}
+		],
+		"name": "recordRoadwaysTrip",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "userTrips",
+		"outputs": [
+			{
+				"internalType": "enum EmissionTracker.TransportCategory",
+				"name": "transportCategory",
+				"type": "uint8"
+			},
+			{
+				"internalType": "enum EmissionTracker.RoadwayType",
+				"name": "roadType",
+				"type": "uint8"
+			},
+			{
+				"internalType": "enum EmissionTracker.PersonalFuelType",
+				"name": "personalFuelType",
+				"type": "uint8"
+			},
+			{
+				"internalType": "uint256",
+				"name": "distance",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "co2Emitted",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+];
+	
+		const emissionsValue = document.getElementById('emissionsValue');
+		
+		// Add refresh button
+		const refreshButton = document.createElement('button');
+		refreshButton.textContent = 'Refresh Emissions';
+		refreshButton.style.marginTop = '20px';
+		refreshButton.style.marginBottom = '20px';
+		document.querySelector('.container').insertBefore(refreshButton, document.querySelector('h1'));
+		
+		// Status message element for better error reporting
+		const statusMessage = document.createElement('p');
+		statusMessage.id = 'statusMessage';
+		statusMessage.style.color = '#ff4081';
+		statusMessage.style.marginTop = '10px';
+		document.querySelector('#dailyEmissions').appendChild(statusMessage);
+	
+		async function updateEmissionsDisplay() {
+			statusMessage.textContent = 'Updating emissions data...';
+			
+			try {
+				if (typeof window.ethereum === 'undefined') {
+					throw new Error('Please install MetaMask to use this application');
+				}
+	
+				const provider = new ethers.providers.Web3Provider(window.ethereum);
+				await provider.send("eth_requestAccounts", []);
+	
+				const signer = provider.getSigner();
+				const userAddress = await signer.getAddress();
+	
+				const contract = new ethers.Contract(contractAddress, contractABI, signer);
+	
+				// Explicitly trigger reset logic by calling getDailyEmissions
+				await contract.getDailyEmissions(userAddress)
+					.catch(error => {
+						throw new Error(`Failed to reset daily emissions: ${error.message}`);
+					});
+	
+				// Get emissions data from contract
+				const dailyEmissions = await contract.getDailyEmissions(userAddress);
+				const weeklyEmissions = await contract.getWeeklyEmissions(userAddress);
+				const monthlyEmissions = await contract.getMonthlyEmissions(userAddress);
+				const yearlyEmissions = await contract.getYearlyEmissions(userAddress);
+	
+				const emissionsInKg = dailyEmissions / 1000;
+				emissionsValue.textContent = `${emissionsInKg.toFixed(2)} Kgs CO2`;
+	
+				// Calculate time period starts for filtering
+				const now = Math.floor(Date.now() / 1000);
+				const secondsInDay = 86400;
+				const currentDayStart = now - (now % secondsInDay);
+				const weekStart = currentDayStart - 6 * secondsInDay;
+				const monthStart = currentDayStart - 29 * secondsInDay;
+				const yearStart = currentDayStart - 364 * secondsInDay;
+	
+				async function updateEmissions(category, transportCategory) {
+					const tripCount = await contract.getTripCount(userAddress);
+					let dailySum = 0, weeklySum = 0, monthlySum = 0, yearlySum = 0;
+	
+					// Get the last reset timestamp to determine if we need time-based filtering
+					const lastReset = await contract.lastUserReset(userAddress);
+					
+					for (let i = 0; i < tripCount; i++) {
+						const tripData = await contract.getTripData(userAddress, i);
+						if (tripData[0] === transportCategory) {
+							const emissionInKg = tripData[4] / 1000;
+							
+							// Since we don't have timestamps in the current contract structure,
+							// we'll use the contract's built-in period tracking
+							// For daily, only count if after last reset
+							if (lastReset <= currentDayStart) {
+								dailySum += emissionInKg;
+							}
+							
+							// For weekly, monthly, yearly we'll use all trips since we don't have timestamps
+							weeklySum += emissionInKg;
+							monthlySum += emissionInKg;
+							yearlySum += emissionInKg;
+						}
+					}
+	
+					const row = document.getElementById(`${category}Emissions`);
+					row.children[1].textContent = dailySum.toFixed(2);
+					row.children[2].textContent = weeklySum.toFixed(2);
+					row.children[3].textContent = monthlySum.toFixed(2);
+					row.children[4].textContent = yearlySum.toFixed(2);
+				}
+	
+				await updateEmissions('personal', 0);
+				await updateEmissions('roadways', 1);
+				await updateEmissions('railways', 2);
+				await updateEmissions('airways', 3);
+				
+				statusMessage.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+				statusMessage.style.color = '#4CAF50';
+	
+			} catch (error) {
+				console.error("Error:", error);
+				statusMessage.textContent = `Error: ${error.message}`;
+				statusMessage.style.color = '#ff4081';
+				emissionsValue.textContent = 'Error loading emissions';
+			}
+		}
+	
+		// Add event listener to refresh button
+		refreshButton.addEventListener('click', updateEmissionsDisplay);
+		
+		// Initial load of emissions data
+		updateEmissionsDisplay();
+	});
+</script>	
+</body>
+</html>

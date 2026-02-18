@@ -1,0 +1,6 @@
+{
+  "name": "hardhat-project",
+  "devDependencies": {
+    "hardhat-gas-reporter": "^2.2.2"
+  }
+}

@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Commercial Vehicle Options</title>
+  <!--   <script src="https://cdn.ethers.io/lib/ethers-5.4.umd.min.js"
+        type="application/javascript"></script> -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212; /* Matte Dark Background */
+            color: #fff; /* Light text for contrast */
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: #212121; /* Slightly lighter than the background */
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            width: 80%;
+            max-width: 600px;
+        }
+
+        h1 {
+            color: #bb86fc; /* A touch of color */
+            margin-bottom: 30px;
+        }
+
+        .options-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        button {
+            background-color: #bb86fc; /* Distinct button color */
+            color: #fff;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #6200ee; /* Darker shade on hover */
+        }
+
+        #roadwayOptionsForm {
+            display: none; /* Initially hidden */
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #555;
+            border-radius: 8px;
+            background-color: #333;
+        }
+
+        #railwaysForm, #airwaysForm {
+            display: none; /* Initially hidden */
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #555;
+            border-radius: 8px;
+            background-color: #333;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #ddd;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #555;
+            border-radius: 6px;
+            background-color: #444;
+            color: #fff;
+            box-sizing: border-box;
+        }
+
+        .vehicle-type-select {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .vehicle-type-select button {
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+        }
+
+        .vehicle-type-select button.selected {
+            background-color: #6200ee; /* Different color for selected */
+        }
+
+        #submitTripBtn {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Select Commercial Vehicle Type</h1>
+        <div class="options-buttons">
+            <button id="roadwaysBtn">Roadways</button>
+            <button id="railwaysBtn">Railways</button>
+            <button id="airwaysBtn">Airways</button>
+        </div>
+
+        <!-- Roadways Options -->
+        <div id="roadwayOptionsForm">
+            <label for="roadwaysDistance">Total Distance Traveled (km):</label>
+            <input type="number" id="roadwaysDistance" placeholder="Enter distance in km">
+
+            <label>Select Vehicle Type:</label>
+            <div class="vehicle-type-select">
+                <button id="taxiBtn" data-vehicle-type="Taxi">Taxi</button>
+                <button id="busBtn" data-vehicle-type="Bus">Bus</button>
+                <button id="autoBtn" data-vehicle-type="Auto">Auto</button>
+            </div>
+
+            <button id="submitRoadwaysTripBtn">Submit Trip</button>
+        </div>
+
+        <!-- Railways Form  -->
+        <div id="railwaysForm">
+            <label for="railwaysDistance">Total Distance Traveled (km):</label>
+            <input type="number" id="railwaysDistance" placeholder="Enter distance in km">
+            <button id="submitRailwaysTripBtn">Submit Trip</button>
+        </div>
+
+        <!-- Airways Form  -->
+        <div id="airwaysForm">
+            <label for="airwaysDistance">Total Distance Traveled (km):</label>
+            <input type="number" id="airwaysDistance" placeholder="Enter distance in km">
+            <button id="submitAirwaysTripBtn">Submit Trip</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const roadwaysBtn = document.getElementById('roadwaysBtn');
+            const railwaysBtn = document.getElementById('railwaysBtn');
+            const airwaysBtn = document.getElementById('airwaysBtn');
+
+            const roadwayOptionsForm = document.getElementById('roadwayOptionsForm');
+            const railwaysForm = document.getElementById('railwaysForm');
+            const airwaysForm = document.getElementById('airwaysForm');
+
+            //Roadways elements
+            const roadwaysDistanceInput = document.getElementById('roadwaysDistance');
+            const taxiBtn = document.getElementById('taxiBtn');
+            const busBtn = document.getElementById('busBtn');
+            const autoBtn = document.getElementById('autoBtn');
+            const submitRoadwaysTripBtn = document.getElementById('submitRoadwaysTripBtn');
+
+            //Railways elements
+            const railwaysDistanceInput = document.getElementById('railwaysDistance');
+            const submitRailwaysTripBtn = document.getElementById('submitRailwaysTripBtn');
+
+             //Airways elements
+            const airwaysDistanceInput = document.getElementById('airwaysDistance');
+            const submitAirwaysTripBtn = document.getElementById('submitAirwaysTripBtn');
+
+            let selectedVehicleType = null; // Store the selected vehicle type
+            let selectedButton = null; // Track the selected button
+
+            const contractAddress = "0xd3553D865893b1064C2490f50450f4809E744AC1"; // Replace with your contract address
+            const contractABI =  [
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "previousEmissions",
+				"type": "uint256"
+			}
+		],
+		"name": "DailyEmissionsReset",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "distance",
+				"type": "uint256"
+			}
+		],
+		"name": "recordAirwaysTrip",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint8",
+				"name": "personalFuelType",
+				"type": "uint8"
+			},
+			{
+				"internalType": "uint256",
+				"name": "distance",
+				"type": "uint256"
+			}
+		],
+		"name": "recordPersonalVehicleTrip",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "distance",
+				"type": "uint256"
+			}
+		],
+		"name": "recordRailwaysTrip",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint8",
+				"name": "roadType",
+				"type": "uint8"
+			},
+			{
+				"internalType": "uint256",
+				"name": "distance",
+				"type": "uint256"
+			}
+		],
+		"name": "recordRoadwaysTrip",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "enum EmissionTracker.TransportCategory",
+				"name": "transportCategory",
+				"type": "uint8"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint8",
+				"name": "roadType",
+				"type": "uint8"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint8",
+				"name": "personalFuelType",
+				"type": "uint8"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "distance",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "co2Emitted",
+				"type": "uint256"
+			}
+		],
+		"name": "TripEnded",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "getDailyEmissions",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "getMonthlyEmissions",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "getTripCount",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "index",
+				"type": "uint256"
+			}
+		],
+		"name": "getTripData",
+		"outputs": [
+			{
+				"internalType": "enum EmissionTracker.TransportCategory",
+				"name": "",
+				"type": "uint8"
+			},
+			{
+				"internalType": "uint8",
+				"name": "",
+				"type": "uint8"
+			},
+			{
+				"internalType": "uint8",
+				"name": "",
+				"type": "uint8"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "getWeeklyEmissions",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "getYearlyEmissions",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "lastUserReset",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "userTrips",
+		"outputs": [
+			{
+				"internalType": "enum EmissionTracker.TransportCategory",
+				"name": "transportCategory",
+				"type": "uint8"
+			},
+			{
+				"internalType": "enum EmissionTracker.RoadwayType",
+				"name": "roadType",
+				"type": "uint8"
+			},
+			{
+				"internalType": "enum EmissionTracker.PersonalFuelType",
+				"name": "personalFuelType",
+				"type": "uint8"
+			},
+			{
+				"internalType": "uint256",
+				"name": "distance",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "co2Emitted",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+]; // Replace with your contract ABI
+
+            //Initially hide all forms
+            roadwayOptionsForm.style.display = 'none';
+            railwaysForm.style.display = 'none';
+            airwaysForm.style.display = 'none';
+
+            roadwaysBtn.addEventListener('click', function() {
+                roadwayOptionsForm.style.display = 'block';
+                railwaysForm.style.display = 'none';
+                airwaysForm.style.display = 'none';
+            });
+
+            railwaysBtn.addEventListener('click', function() {
+                railwaysForm.style.display = 'block';
+                roadwayOptionsForm.style.display = 'none';
+                airwaysForm.style.display = 'none';
+            });
+
+            airwaysBtn.addEventListener('click', function() {
+                airwaysForm.style.display = 'block';
+                roadwayOptionsForm.style.display = 'none';
+                railwaysForm.style.display = 'none';
+            });
+
+            // Vehicle type selection for roadways
+            const vehicleTypeButtons = document.querySelectorAll('.vehicle-type-select button');
+            vehicleTypeButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Remove 'selected' class from previously selected button
+                    if (selectedButton) {
+                        selectedButton.classList.remove('selected');
+                    }
+
+                    // Add 'selected' class to the clicked button
+                    this.classList.add('selected');
+                    selectedButton = this;
+
+                    selectedVehicleType = this.dataset.vehicleType; // Store the vehicle type
+                });
+            });
+
+            // Submit button logic
+            submitRoadwaysTripBtn.addEventListener('click', async function() {
+                const distance = parseFloat(roadwaysDistanceInput.value);
+
+                if (isNaN(distance) || distance <= 0 || !Number.isInteger(distance)) {
+                    alert('Please enter a valid positive whole number for the distance.');
+                    return;
+                }
+
+                if (!selectedVehicleType) {
+                    alert('Please select a vehicle type.');
+                    return;
+                }
+
+                let roadTypeValue;
+                if (selectedVehicleType == "Taxi") {
+                    roadTypeValue = 0;
+                } else if (selectedVehicleType == "Bus") {
+                    roadTypeValue = 1;
+                } else if (selectedVehicleType == "Auto") {
+                    roadTypeValue = 2;
+                }
+
+                // --- Smart Contract Interaction for Roadways ---
+                try {
+                    // Check if MetaMask is installed
+                    if (typeof window.ethereum === 'undefined') {
+                        alert('Please install MetaMask to use this feature!');
+                        return;
+                    }
+
+                    // Connect to MetaMask
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    await provider.send("eth_requestAccounts", []);
+
+                    // Get the signer
+                    const signer = provider.getSigner();
+
+                    // Create a contract instance
+                    const contract = new ethers.Contract(contractAddress, contractABI, signer);
+
+                    // Call the recordRoadwaysTrip function
+                    const transaction = await contract.recordRoadwaysTrip(roadTypeValue, parseInt(distance));
+
+                    // Wait for the transaction to be mined
+                    await transaction.wait();
+
+                    alert('Trip submitted successfully!');
+                    // Optionally reset the form
+                    roadwaysDistanceInput.value = '';
+
+                } catch (error) {
+                    console.error("Transaction failed:", error);
+                    alert('Failed to submit trip. See console for details.');
+                }
+                 // Reset the selected button
+                if (selectedButton) {
+                    selectedButton.classList.remove('selected');
+                    selectedButton = null;
+                }
+                selectedVehicleType = null;
+            });
+
+            submitRailwaysTripBtn.addEventListener('click',  async function() {
+                const distance = parseFloat(railwaysDistanceInput.value);
+                 if (isNaN(distance) || distance <= 0 || !Number.isInteger(distance)) {
+                    alert('Please enter a valid positive whole number for the distance.');
+                    return;
+                }
+
+                   // --- Smart Contract Interaction for Railways ---
+                try {
+                    // Check if MetaMask is installed
+                    if (typeof window.ethereum === 'undefined') {
+                        alert('Please install MetaMask to use this feature!');
+                        return;
+                    }
+
+                    // Connect to MetaMask
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    await provider.send("eth_requestAccounts", []);
+
+                    // Get the signer
+                    const signer = provider.getSigner();
+
+                    // Create a contract instance
+                    const contract = new ethers.Contract(contractAddress, contractABI, signer);
+
+                    // Call the recordRailwaysTrip function
+                    const transaction = await contract.recordRailwaysTrip(parseInt(distance));
+
+                    // Wait for the transaction to be mined
+                    await transaction.wait();
+
+                    alert('Trip submitted successfully!');
+                    // Optionally reset the form
+                    railwaysDistanceInput.value = '';
+
+                } catch (error) {
+                    console.error("Transaction failed:", error);
+                    alert('Failed to submit trip. See console for details.');
+                }
+
+            });
+
+            submitAirwaysTripBtn.addEventListener('click', async function() {
+                 const distance = parseFloat(airwaysDistanceInput.value);
+                 if (isNaN(distance) || distance <= 0 || !Number.isInteger(distance)) {
+                    alert('Please enter a valid positive whole number for the distance.');
+                    return;
+                }
+                  // --- Smart Contract Interaction for Airways ---
+                try {
+                    // Check if MetaMask is installed
+                    if (typeof window.ethereum === 'undefined') {
+                        alert('Please install MetaMask to use this feature!');
+                        return;
+                    }
+
+                    // Connect to MetaMask
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    await provider.send("eth_requestAccounts", []);
+
+                    // Get the signer
+                    const signer = provider.getSigner();
+
+                    // Create a contract instance
+                    const contract = new ethers.Contract(contractAddress, contractABI, signer);
+
+                    // Call the recordAirwaysTrip function
+                    const transaction = await contract.recordAirwaysTrip(parseInt(distance));
+
+                    // Wait for the transaction to be mined
+                    await transaction.wait();
+
+                    alert('Trip submitted successfully!');
+                    // Optionally reset the form
+                    airwaysDistanceInput.value = '';
+
+                } catch (error) {
+                    console.error("Transaction failed:", error);
+                    alert('Failed to submit trip. See console for details.');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
